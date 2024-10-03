@@ -1,0 +1,4 @@
+validators:
+  - validator_address: "storyvaloper18zlwzg66k96jkvst2kthydue6yh7vshzg4h6ar"
+    chain_id: "iliad-0"
+  # Add more validators as needed
