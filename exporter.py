@@ -45,7 +45,12 @@ def fetch_validator_data(validator_address):
         return -1, -1, "", -1, -1  # Return -1 in case of an error
 
 # Fetch validator rank and lowest active set stake from the explorers API with 10-second timeout
+# Initialize variables to store the last known valid values
+last_known_rank = -1
+last_known_lowest_stake = -1
+
 def fetch_validator_data_from_explorer(validator_address):
+    global last_known_rank, last_known_lowest_stake
     url = "https://testnet.story.api.explorers.guru/api/v1/validators"
 
     try:
@@ -55,22 +60,31 @@ def fetch_validator_data_from_explorer(validator_address):
 
         # Find the rank for the specified validator
         validator_info = next((v for v in data if v['operatorAddress'] == validator_address), None)
-        rank = validator_info.get('rank', -1) if validator_info else -1
-        print(f"Validator {validator_address} Rank: {rank}")
+        rank = validator_info.get('rank', -1) if validator_info else last_known_rank  # Use last known rank if None
 
         # Find the validator with rank 100 (lowest active set)
         validator_100 = next((v for v in data if v['rank'] == 100), None)
-        lowest_stake = int(validator_100['tokens']) if validator_100 else -1
+        lowest_stake = int(validator_100['tokens']) if validator_100 else last_known_lowest_stake  # Use last known lowest stake if None
+
+        # Update last known values only if valid data is retrieved
+        if validator_info:
+            last_known_rank = rank
+        if validator_100:
+            last_known_lowest_stake = lowest_stake
+
+        print(f"Validator {validator_address} Rank: {rank}")
         print(f"Lowest Active Set Stake: {lowest_stake}")
 
         return rank, lowest_stake
 
     except requests.exceptions.Timeout:
-        print(f"Request timed out while fetching data from {url}")
-        return -1, -1
+        print(f"Request timed out while fetching data from {url}. Using last known values.")
+        return last_known_rank, last_known_lowest_stake
+
     except Exception as e:
-        print(f"Error fetching data from {url}: {e}")
-        return -1, -1  # Return -1 for both in case of an error
+        print(f"Error fetching data from {url}: {e}. Using last known values.")
+        return last_known_rank, last_known_lowest_stake  # Return last known values in case of an error
+
 
 # Fetch validator missed blocks and process heatmap data for Grafana
 def fetch_validator_block_signing_status(validator_address):
